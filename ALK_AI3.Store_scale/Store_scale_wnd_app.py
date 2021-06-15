@@ -19,8 +19,8 @@ from PIL import Image, ImageTk
 ########################################################################################################################
 # Globals - constant
 default_data_location = 'C:/AI/AI3/MiniProject1'
-image_size = (400, 400)  # width and height of the used images
-image_shape = (400, 400, 3)  # the expected input shape for the trained models; since the images in the Fruit-360
+image_size = (100, 100)  # width and height of the used images
+image_shape = (100, 100, 3)  # the expected input shape for the trained models; since the images in the Fruit-360
 # are 100 x 100 RGB images, this is the required input shape
 batch_size = 5
 validation_percent = 0.3
@@ -532,7 +532,7 @@ def run_prediction():
 
 # create root window
 root = Tk()
-root.title('Mini Project 1 - Store scale')
+root.title('Store scale')
 root.geometry('{}x{}'.format(919, 378))
 root.resizable(0, 0)
 
