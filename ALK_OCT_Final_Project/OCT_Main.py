@@ -5,6 +5,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import pandas as pd
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tkinter import Tk, ttk, Label, filedialog, messagebox, StringVar, IntVar, DoubleVar, Text, Scale
 from PIL import Image, ImageTk
@@ -30,12 +31,12 @@ background_image_location = 'Main_image.jpg'
 main_image_width = 695
 main_image_height = 545
 
-data_main_folder = 'C:\GitHub\AI\ALK_OCT_Final_Project'
+data_main_folder = 'C:\\GitHub\\AI\\ALK_OCT_Final_Project'
 default_data_location = data_main_folder
-current_image_file_for_prediction = 'C:\GitHub\AI\ALK_OCT_Final_Project\Init_prediction.jpg'
+current_image_file_for_prediction = 'C:\\GitHub\\AI\\ALK_OCT_Final_Project\\Init_prediction.jpg'
 prediction_image_width = 500
 prediction_image_height = 500
-training_result_graph_location = 'C:\GitHub\AI\ALK_OCT_Final_Project\Models\InceptionV3_LOSS_training_result.png'
+training_result_graph_location = 'C:\\GitHub\\AI\\ALK_OCT_Final_Project\\Empty_training_result.png'
 training_result_graph_width = 685
 training_result_graph_height = 290
 
@@ -48,8 +49,8 @@ validation_set = None
 test_set = None
 labels_list = None
 
-validation_percent = 0.3 # percentage of training set to bw used as validation set
-batch_size = 50
+validation_percent = 0.3  # percentage of training set to bw used as validation set
+batch_size = 10
 image_size = (299, 299)  # width and height of the used images
 image_shape = (299, 299, 3)  # the expected input shape for the trained models
 learning_rate = 0.1  # initial learning rate
@@ -100,7 +101,7 @@ def import_data_from_folders(import_scope, data_main_folder, validation_percent=
     train_image_folder = os.path.join(data_main_folder, 'Training')
     test_image_folder = os.path.join(data_main_folder, 'Test')
 
-    # Import subfolders name as a list of labels
+    # Import sub-folders name as a list of labels
     labels = os.listdir(train_image_folder)
 
     # given the train and test folder paths and a validation to test ratio, this method creates three generators
@@ -116,6 +117,7 @@ def import_data_from_folders(import_scope, data_main_folder, validation_percent=
         train_data_generator = ImageDataGenerator(
             width_shift_range=0.0,
             height_shift_range=0.0,
+            rescale=1./255.0,         # change value of each pixel value from 0-255 to 0-1
             zoom_range=0.0,
             horizontal_flip=True,
             vertical_flip=True,  # randomly flip images
@@ -123,7 +125,7 @@ def import_data_from_folders(import_scope, data_main_folder, validation_percent=
             validation_split=validation_percent)  # percentage indicating how much of the training set should be kept
         # for validation
 
-        test_data_generator = ImageDataGenerator()
+        test_data_generator = ImageDataGenerator(rescale=1./255.0)
 
         train_set_gen = train_data_generator.flow_from_directory(
             train_image_folder,
@@ -212,6 +214,13 @@ def load_model_from_file(data_main_folder):
     if selected_model_file:
         global model
         model = load_model(selected_model_file.name)
+
+        global image_shape
+        if model.name == 'NASNet':
+            image_shape = (331, 331, 3)
+        else:
+            image_shape = (299, 299, 3)
+
         loaded_model_file_name_var.set(selected_model_file.name)
         if labels_list is None:
             import_data(0, data_main_folder, 0)
@@ -263,11 +272,12 @@ def run_prediction():
         return
 
     if current_image_file_for_prediction:
-        # Import selected image as image to dislay in application
+        # Import selected image as image to display in application
         image = tf.keras.preprocessing.image.load_img(current_image_file_for_prediction,
                                                       target_size=image_size)
         image = tf.keras.preprocessing.image.img_to_array(image)
         image_as_array = np.array([image])
+        image_as_array = image_as_array/255.0
 
         prediction = model.predict(image_as_array)
 
@@ -338,6 +348,9 @@ def change_data_location(current_location):
 #   create_model_1 - simple
 ########################################################################################################################
 def create_model_1(input_shape, num_classes):
+    global image_shape
+    image_shape = (299, 299, 3)
+
     model = tf.keras.models.Sequential(name='Eye-Tech')
     model.add(tf.keras.layers.InputLayer(input_shape=input_shape))
     model.add(tf.keras.layers.Conv2D(16, (5, 5), strides=(1, 1), padding='same', activation='relu', name='conv1'))
@@ -361,11 +374,14 @@ def create_model_1(input_shape, num_classes):
 #   create_model_2 - InceptionV3
 ########################################################################################################################
 def create_model_2(input_shape, num_classes):
+    global image_shape
+    image_shape = (299, 299, 3)
+
     model = tf.keras.applications.InceptionV3(
         include_top=True,
         weights=None,
         input_tensor=None,
-        input_shape=image_shape,
+        input_shape=input_shape,
         pooling=None,
         classes=num_classes,
         classifier_activation="softmax",
@@ -404,10 +420,6 @@ def create_model(selected_model, input_shape, num_classes):
         return create_model_2(input_shape, num_classes)
     elif selected_model == 2:
         return create_model_3(input_shape, num_classes)
-    # elif selected_model == 3:
-    #     return create_model_4(input_shape, num_classes)
-    # elif selected_model == 4:
-    #     return create_model_5(input_shape, num_classes)
     else:
         print('Not defined model')
         return
@@ -447,13 +459,25 @@ def plot_model_history(model_history, training_goal, model_folder="", selected_m
     photoImg = ImageTk.PhotoImage(img)
     training_result_graph_label.configure(height=training_result_graph_height, width=training_result_graph_width)
     training_result_graph_label.configure(image=photoImg)
-   # global training_result_graph_label
     training_result_graph_label.image = photoImg
 
-    # traning_result_graph = Image.frombytes('RGB',
-    #                     plt.canvas.get_width_height(), plt.canvas.tostring_rgb())
-    # plt.show()
+########################################################################################################################
+#   store_model_history
+########################################################################################################################
+def store_model_history(model_history, training_goal, model_folder="", selected_model=0):
 
+    # create file name to store model history data
+    if training_goal == 1:
+        history_file = model_folder + '/' + 'M' + str(selected_model + 1) + '_ACCU_training_result.csv'
+    else:
+        history_file = model_folder + '/' + 'M' + str(selected_model + 1) + '_LOSS_training_result.csv'
+
+    # convert the history.history dict to a pandas DataFrame
+    hist_df = pd.DataFrame(model_history.history)
+
+    # save data to CSV file
+    with open(history_file, mode='w') as f:
+        hist_df.to_csv(f)
 
 ########################################################################################################################
 # run_training
@@ -513,6 +537,7 @@ def run_training(selected_model, data_localization, training_goal, input_shape, 
     print("Test: accuracy = %f  ;  loss_v = %f" % (accuracy_test, loss_test))
 
     plot_model_history(history, training_goal, model_folder, selected_model)
+    store_model_history(history, training_goal, model_folder, selected_model)
 
     test_set.reset()
     y_pred = model.predict(test_set, steps=(test_set.n // batch_size) + 1, verbose=verbose)
@@ -648,11 +673,11 @@ current_data_location.set(default_data_location)
 location_change_button = ttk.Button(train_frame,
                                     text='Change',
                                     command=lambda: change_data_location(current_data_location))
-location_change_button.grid(row=1, column=0, padx=5, sticky='w')
+location_change_button.grid(row=2, column=0, padx=5, sticky='w')
 
 # create label for current data location
-current_location_label = Label(train_frame, textvariable=current_data_location, anchor='w', wraplength=200)
-current_location_label.grid(row=1, column=1, padx=5, sticky='w', columnspan=2)
+current_location_label = Label(train_frame, textvariable=current_data_location, anchor='w')
+current_location_label.grid(row=1, column=0, padx=5, sticky='w', columnspan=3)
 
 space = Label(train_frame, text='')
 space.grid(row=3, column=0, sticky='w')
@@ -736,7 +761,7 @@ selected_model_var.set(0)
 
 # create model selection combobox
 training_model_combo = ttk.Combobox(train_frame)
-training_model_combo['values'] = ('1 - Tech-Eye', '2 - ResNet', '3 - Inception V3', '4 - NASNetMobile')
+training_model_combo['values'] = ('1 - Eye-Tech', '2 - Inception V3', '3 - NASNetMobile')
 training_model_combo['state'] = 'readonly'
 training_model_combo.current(selected_model_var.get())
 training_model_combo.bind('<<ComboboxSelected>>', model_combobox_changed)
