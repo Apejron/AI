@@ -36,7 +36,7 @@ default_data_location = data_main_folder
 current_image_file_for_prediction = 'C:\\GitHub\\AI\\ALK_OCT_Final_Project\\Init_prediction.jpg'
 prediction_image_width = 500
 prediction_image_height = 500
-training_result_graph_location = 'C:\\GitHub\\AI\\ALK_OCT_Final_Project\\Empty_training_result.png'
+training_result_graph_location = 'C:\\GitHub\\AI\\ALK_OCT_Final_Project\\Empty_training_result.jpg'
 training_result_graph_width = 685
 training_result_graph_height = 290
 
